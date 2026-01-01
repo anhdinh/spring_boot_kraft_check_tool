@@ -18,6 +18,11 @@ repositories {
 	mavenCentral()
 }
 
+bootJar {
+	archiveFileName = 'kafka-tool.jar' // Đặt tên cố định cho dễ copy
+}
+
+
 dependencies {
 	// WebFlux để chạy Flux stream realtime
 
