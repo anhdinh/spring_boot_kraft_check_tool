@@ -19,7 +19,7 @@ public class KafkaWebController {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final KafkaStreamService streamService;
 
-    private static final String TOPIC = "mytopic";
+    private static final String TOPIC = "chat-room";
 
 
 

@@ -5,19 +5,90 @@
     <title>Kafka Real-time Dashboard</title>
     <link href="/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background:#eef2f3; min-height:100vh; display:flex; justify-content:center; align-items:center; padding: 20px; }
-        .container-box { display: flex; gap: 20px; max-width: 1000px; width: 100%; }
-        .card { flex: 1; border-radius: 12px; height: 550px; display: flex; flex-direction: column; }
-        .header-bar{ background:linear-gradient(135deg,#007bff,#00c6ff); padding:18px; color:white; border-radius: 12px 12px 0 0; }
-        .message-stream { flex-grow: 1; overflow-y: auto; background: #f8f9fa; padding: 15px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
-        .msg-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .status-dot { height: 10px; width: 10px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        body {
+            background:#eef2f3;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding: 20px;
+        }
+        .container-box {
+            display: flex;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        .card {
+            flex: 1;
+            border-radius: 12px;
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+        }
+        .header-bar {
+            background: linear-gradient(135deg,#007bff,#00c6ff);
+            padding:18px;
+            color:white;
+            border-radius: 12px 12px 0 0;
+        }
+        .message-stream {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            display: flex;
+            flex-direction: column; /* scroll xuống dưới */
+        }
+        .msg-item {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+            width: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-left .bubble {
+            background: #ffffff;
+            align-self: flex-start;
+            border-radius: 12px 12px 12px 0;
+            padding: 8px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .msg-right .bubble {
+            background: #DCF8C6;
+            align-self: flex-end;
+            border-radius: 12px 12px 0 12px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .msg-header {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 2px;
+        }
+        .msg-header strong {
+            color: #333;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
 
 <div class="container-box">
+    <!-- Sender Card -->
     <div class="card shadow-lg">
         <div class="header-bar">
             <h3 class="m-0">Sender</h3>
@@ -26,18 +97,24 @@
         <div class="p-4">
             <div id="alertBox" style="display:none" class="alert alert-success"></div>
             <div class="mb-3">
-                <label class="form-label">🔑 Key</label>
-                <label for="key"></label><input id="key" class="form-control" th:value="user-1" placeholder="vd: user-1">
+                <label class="form-label">👤 User</label>
+                <label id="lb_key" for="key"></label><input style="display:none" id="key" class="form-control" placeholder="vd: user-1" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">✉ Message</label>
-                <textarea id="message" rows="3" class="form-control" placeholder="Nhập nội dung..."></textarea>
+                <label for="message"></label><textarea
+                        id="message"
+                        rows="3"
+                        class="form-control"
+                        placeholder="Nhập nội dung..."
+                        onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendKafka(); }" required></textarea>
             </div>
             <button class="btn btn-primary w-100 fw-bold" onclick="sendKafka()">GỬI TIN</button>
-            <p class="text-center mt-3 text-muted small">Topic: <b>mytopic</b></p>
+            <p class="text-center mt-3 text-muted small">Topic: <b>chat-room</b></p>
         </div>
     </div>
 
+    <!-- Receiver Card -->
     <div class="card shadow-lg">
         <div class="header-bar bg-dark" style="background: linear-gradient(135deg,#343a40,#6c757d);">
             <h3 class="m-0">Receiver</h3>
@@ -52,13 +129,45 @@
 </div>
 
 <script>
-    // --- PHẦN GỬI TIN (GIỮ NGUYÊN) ---
+    const users = ["Cua ẩn sỹ",
+        "Rắn Đuôi Chuông", "Mèo Xảo Quyệt", "Cáo Già", "Đại Bàng Lửa", "Hổ Gầm Vang",
+        "Gấu Lôi Thôi", "Khỉ Lách Chanh", "Rùa Tốc Độ", "Cá Mập Ăn Chay", "Sóc Nhanh Nhẹn",
+        "Voi Trầm Tư", "Cú Mèo Thông Thái", "Ngựa Hoang Dã", "Sói Cô Độc", "Lười Chậm Chạp",
+        "Kiến Kiên Trì", "Báo Đốm Chớp Nhoáng", "Lạc Đà Kiên Cường", "Thỏ Ngây Ngô", "Chim Ưng Vĩ Đại",
+        "Heo Lạc Quan", "Chuột Tiếu Tụy", "Vịt Lanh Chanh", "Thanh Xà Nghiệt Ngã", "Bạch Tuộc",
+        "Tê Giác Lạnh Lùng", "Sư Tử Oai Nghi", "Bọ Cạp Hiểm Độc", "Thiên Nga Kiêu Kỳ", "Khủng Long Bạo Chúa"
+    ];
+
+    function generateKey() {
+        const keyInput = document.getElementById("key");
+        const randomIndex = Math.floor(Math.random() * users.length);
+        const selectedUser = users[randomIndex];
+        const generatedKey = selectedUser + "_" + Math.floor(Math.random() * 100);
+        keyInput.value = generatedKey;
+    }
+
+    // Gọi hàm ngay khi trang web vừa load xong
+    window.onload = generateKey;
+
+    const keyInput = document.getElementById("key");
+    const keyLabel = document.getElementById("lb_key");
+    // --- PHẦN GỬI TIN ---
     async function sendKafka() {
         const payload = {
-            key: document.getElementById("key").value,
+            key: keyInput.value,
             message: document.getElementById("message").value
         };
+        if (!payload.message) {
+            return;
+        }
 
+        if(!payload.key){
+            alert("user không thể để trống!")
+            return;
+        }else{
+            keyLabel.innerText = keyInput.value;
+            keyInput.style.display = "none";
+        }
         try {
             const res = await fetch("/send", {
                 method:"POST",
@@ -66,75 +175,79 @@
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-
-            const alert = document.getElementById("alertBox");
-            alert.innerText = "Gửi thành công! Offset: " + data.offset;
-            alert.style.display = "block";
-            setTimeout(()=> alert.style.display="none", 3000);
+            // const alert = document.getElementById("alertBox");
+            // alert.innerText = "Gửi thành công!";
+            // alert.style.display = "block";
+            // setTimeout(()=> alert.style.display="none", 3000);
             document.getElementById("message").value = "";
         } catch (err) {
             console.error("Lỗi gửi tin:", err);
         }
     }
 
-    // --- PHẦN NHẬN TIN (ĐÃ CẢI TIẾN) ---
+    // --- PHẦN NHẬN TIN ---
     let lastMessageContent = "";
     let lastMessageTime = 0;
+    let currentUser = "";
+
+
 
     function setupStream() {
-        // Đóng kết nối cũ nếu tồn tại để tránh rò rỉ
-        if (window.eventSource) {
-            window.eventSource.close();
-        }
+        if (window.eventSource) window.eventSource.close();
 
         const eventSource = new EventSource("/api/stream");
         window.eventSource = eventSource;
 
         eventSource.addEventListener("message", (event) => {
+            currentUser = document.getElementById("key").value
             const rawData = event.data;
 
-            // 1. Lọc bỏ tin nhắn Heartbeat/Ping từ server
-            if (rawData.includes("heartbeat") || rawData.trim() === "") {
-                return;
-            }
+            if (!rawData || rawData.toLowerCase().includes("heartbeat")) return;
 
-            // 2. Chống trùng lặp (Debounce)
-            // Nếu nội dung giống hệt tin trước và cách nhau chưa đầy 1 giây -> Bỏ qua
             const now = Date.now();
-            if (rawData === lastMessageContent && (now - lastMessageTime) < 1000) {
-                return;
-            }
-
+            if (rawData === lastMessageContent && (now - lastMessageTime) < 1000) return;
             lastMessageContent = rawData;
             lastMessageTime = now;
 
-            // 3. Hiển thị lên giao diện
+            let messageText = rawData;
+            let user = "";
+            try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.message) messageText = parsed.message;
+                if (parsed.user) user = parsed.user;
+            } catch (err) {}
+
             const streamBox = document.getElementById("streamBox");
             const emptyState = document.getElementById("emptyState");
-
             if (emptyState) emptyState.remove();
 
             const msgDiv = document.createElement("div");
-            msgDiv.className = "msg-item";
+            const isCurrentUser = currentUser === user;
+            msgDiv.className = isCurrentUser ? "msg-item msg-right" : "msg-item msg-left";
+
             msgDiv.innerHTML = `
-                <div style="font-size: 11px; color: #888;">${new Date().toLocaleTimeString()}</div>
-                <div style="word-wrap: break-word;">${rawData}</div>
+                <div class="msg-header" style="text-align: ${isCurrentUser ? 'right' : 'left'};">
+                    <strong>${user || "Anonymous"}</strong> • ${new Date().toLocaleTimeString()}
+                </div>
+                <div class="bubble">
+                    ${messageText}
+                </div>
             `;
 
-            streamBox.prepend(msgDiv);
+            streamBox.appendChild(msgDiv);
+            streamBox.scrollTop = streamBox.scrollHeight; // scroll xuống tin mới
 
-            // Giới hạn số lượng hiển thị để tránh lag trình duyệt
-            if (streamBox.children.length > 50) {
-                streamBox.removeChild(streamBox.lastChild);
+            // Giới hạn số lượng hiển thị
+            if (streamBox.children.length > 10000) {
+                streamBox.removeChild(streamBox.firstChild);
             }
         });
 
-        eventSource.onerror = (err) => {
+        eventSource.onerror = () => {
             console.warn("Stream ngắt kết nối, đang chờ tự động kết nối lại...");
         };
     }
 
-    // Chạy khởi tạo stream
     setupStream();
 </script>
 
