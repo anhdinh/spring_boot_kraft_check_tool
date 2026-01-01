@@ -1,0 +1,29 @@
+
+spring:
+  application:
+    name: kraf-tes
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Đảm bảo tin nhắn được gửi đi an toàn
+      acks: all
+      retries: 3
+
+    consumer:
+      # Group ID để quản lý offset
+      group-id: kraf-tes-group
+      # Tự động đọc từ đầu nếu là consumer mới
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # Tắt tự động commit nếu bạn muốn quản lý thủ công (tùy chọn)
+      enable-auto-commit: true
+
+    template:
+      # Topic mặc định nếu bạn dùng KafkaTemplate mà không chỉ định tên topic
+      default-topic: demo-kraft
+server:
+  port: 8081
