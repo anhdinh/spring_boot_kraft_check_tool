@@ -92,7 +92,7 @@
     <div class="card shadow-lg">
         <div class="header-bar">
             <h3 class="m-0">Sender</h3>
-            <div style="font-size:13px;opacity:.75">Gửi message vào Kafka</div>
+            <div style="font-size:13px;opacity:.75">Gửi message</div>
         </div>
         <div class="p-4">
             <div id="alertBox" style="display:none" class="alert alert-success"></div>
@@ -119,7 +119,7 @@
         <div class="header-bar bg-dark" style="background: linear-gradient(135deg,#343a40,#6c757d);">
             <h3 class="m-0">Receiver</h3>
             <div style="font-size:13px;opacity:.75">
-                <span class="status-dot"></span> Đang chờ tin nhắn từ kafka...
+                <span class="status-dot"></span> Đang chờ tin nhắn ...
             </div>
         </div>
         <div id="streamBox" class="message-stream">
@@ -129,126 +129,102 @@
 </div>
 
 <script>
-    const users = ["Cua ẩn sỹ",
-        "Rắn Đuôi Chuông", "Mèo Xảo Quyệt", "Cáo Già", "Đại Bàng Lửa", "Hổ Gầm Vang",
-        "Gấu Lôi Thôi", "Khỉ Lách Chanh", "Rùa Tốc Độ", "Cá Mập Ăn Chay", "Sóc Nhanh Nhẹn",
-        "Voi Trầm Tư", "Cú Mèo Thông Thái", "Ngựa Hoang Dã", "Sói Cô Độc", "Lười Chậm Chạp",
-        "Kiến Kiên Trì", "Báo Đốm Chớp Nhoáng", "Lạc Đà Kiên Cường", "Thỏ Ngây Ngô", "Chim Ưng Vĩ Đại",
-        "Heo Lạc Quan", "Chuột Tiếu Tụy", "Vịt Lanh Chanh", "Thanh Xà Nghiệt Ngã", "Bạch Tuộc",
-        "Tê Giác Lạnh Lùng", "Sư Tử Oai Nghi", "Bọ Cạp Hiểm Độc", "Thiên Nga Kiêu Kỳ", "Khủng Long Bạo Chúa"
-    ];
+    const users = ["Cua ẩn sỹ", "Rắn Đuôi Chuông", "Mèo Xảo Quyệt", "Cáo Già", "Đại Bàng Lửa", "Hổ Gầm Vang", "Gấu Lôi Thôi", "Khỉ Lách Chanh", "Rùa Tốc Độ", "Cá Mập Ăn Chay", "Sóc Nhanh Nhẹn", "Voi Trầm Tư", "Cú Mèo Thông Thái", "Ngựa Hoang Dã", "Sói Cô Độc", "Lười Chậm Chạp", "Kiến Kiên Trì", "Báo Đốm Chớp Nhoáng", "Lạc Đà Kiên Cường", "Thỏ Ngây Ngô", "Chim Ưng Vĩ Đại", "Heo Lạc Quan", "Chuột Tiếu Tụy", "Vịt Lanh Chanh", "Thanh Xà Nghiệt Ngã", "Bạch Tuộc", "Tê Giác Lạnh Lùng", "Sư Tử Oai Nghi", "Bọ Cạp Hiểm Độc", "Thiên Nga Kiêu Kỳ", "Khủng Long Bạo Chúa"];
 
-    function generateKey() {
-        const keyInput = document.getElementById("key");
-        const randomIndex = Math.floor(Math.random() * users.length);
-        const selectedUser = users[randomIndex];
-        const generatedKey = selectedUser + "_" + Math.floor(Math.random() * 100);
-        keyInput.value = generatedKey;
-    }
-
-    // Gọi hàm ngay khi trang web vừa load xong
-    window.onload = generateKey;
-
-    const keyInput = document.getElementById("key");
-    const keyLabel = document.getElementById("lb_key");
-    // --- PHẦN GỬI TIN ---
-    async function sendKafka() {
-        const payload = {
-            key: keyInput.value,
-            message: document.getElementById("message").value
-        };
-        if (!payload.message) {
-            return;
-        }
-
-        if(!payload.key){
-            alert("user không thể để trống!")
-            return;
-        }else{
-            keyLabel.innerText = keyInput.value;
-            keyInput.style.display = "none";
-        }
-        try {
-            const res = await fetch("/send", {
-                method:"POST",
-                headers:{ "Content-Type":"application/json" },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            // const alert = document.getElementById("alertBox");
-            // alert.innerText = "Gửi thành công!";
-            // alert.style.display = "block";
-            // setTimeout(()=> alert.style.display="none", 3000);
-            document.getElementById("message").value = "";
-        } catch (err) {
-            console.error("Lỗi gửi tin:", err);
-        }
-    }
-
-    // --- PHẦN NHẬN TIN ---
-    let lastMessageContent = "";
-    let lastMessageTime = 0;
     let currentUser = "";
 
+    // 1. Khởi tạo User ngẫu nhiên
+    function generateKey() {
+        const keyInput = document.getElementById("key");
+        const keyLb = document.getElementById("lb_key");
+        const randomIndex = Math.floor(Math.random() * users.length);
+        currentUser = users[randomIndex] + "_" + Math.floor(Math.random() * 100);
+        keyInput.value = currentUser;
+        keyLb.innerText = currentUser;
+    }
 
+    // 2. Hàm vẽ tin nhắn lên màn hình (Dùng chung cho cả 2 nguồn)
+    function renderMessage(user, messageText, timestamp, isHistory = false) {
+        const streamBox = document.getElementById("streamBox");
+        const emptyState = document.getElementById("emptyState");
+        if (emptyState) emptyState.remove();
 
+        const msgDiv = document.createElement("div");
+        const isMe = currentUser === user;
+        msgDiv.className = isMe ? "msg-item msg-right" : "msg-item msg-left";
+
+        const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+        msgDiv.innerHTML = `
+        <div class="msg-header" style="text-align: ${isMe ? 'right' : 'left'};">
+            <strong>${user || "Anonymous"}</strong> • ${time}
+        </div>
+        <div class="bubble">${messageText}</div>
+    `;
+
+        if (isHistory) {
+            streamBox.prepend(msgDiv); // Tin cũ load từ DB chèn lên đầu (nếu loop ngược)
+        } else {
+            streamBox.appendChild(msgDiv); // Tin mới từ Kafka chèn xuống cuối
+        }
+        streamBox.scrollTop = streamBox.scrollHeight;
+    }
+
+    // 3. Load 10 tin mới nhất từ MongoDB
+    async function loadHistory() {
+        try {
+            const res = await fetch("/api/latest");
+            const data = await res.json();
+            // data đang là mới -> cũ, ta lặp để hiển thị
+            data.forEach(msg => {
+                renderMessage(msg.user, msg.message, msg.created_time, false);
+            });
+            // Lưu ý: data từ API là DESC, khi append bình thường nó sẽ đúng thứ tự từ trên xuống dưới
+        } catch (err) {
+            console.error("Lỗi load lịch sử:", err);
+        }
+    }
+
+    // 4. Gửi tin nhắn
+    async function sendKafka() {
+        const msgInput = document.getElementById("message");
+        const payload = { key: currentUser, message: msgInput.value };
+
+        if (!payload.message) return;
+
+        try {
+            await fetch("/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            msgInput.value = "";
+        } catch (err) {
+            console.error("Lỗi gửi:", err);
+        }
+    }
+
+    // 5. Lắng nghe luồng Real-time (SSE)
     function setupStream() {
-        if (window.eventSource) window.eventSource.close();
-
         const eventSource = new EventSource("/api/stream");
-        window.eventSource = eventSource;
-
-        eventSource.addEventListener("message", (event) => {
-            currentUser = document.getElementById("key").value
+        eventSource.onmessage = (event) => {
             const rawData = event.data;
-
-            if (!rawData || rawData.toLowerCase().includes("heartbeat")) return;
-
-            const now = Date.now();
-            if (rawData === lastMessageContent && (now - lastMessageTime) < 1000) return;
-            lastMessageContent = rawData;
-            lastMessageTime = now;
-
-            let messageText = rawData;
-            let user = "";
+            if (!rawData || rawData.includes("heartbeat")) return;
             try {
                 const parsed = JSON.parse(rawData);
-                if (parsed.message) messageText = parsed.message;
-                if (parsed.user) user = parsed.user;
-            } catch (err) {}
-
-            const streamBox = document.getElementById("streamBox");
-            const emptyState = document.getElementById("emptyState");
-            if (emptyState) emptyState.remove();
-
-            const msgDiv = document.createElement("div");
-            const isCurrentUser = currentUser === user;
-            msgDiv.className = isCurrentUser ? "msg-item msg-right" : "msg-item msg-left";
-
-            msgDiv.innerHTML = `
-                <div class="msg-header" style="text-align: ${isCurrentUser ? 'right' : 'left'};">
-                    <strong>${user || "Anonymous"}</strong> • ${new Date().toLocaleTimeString()}
-                </div>
-                <div class="bubble">
-                    ${messageText}
-                </div>
-            `;
-
-            streamBox.appendChild(msgDiv);
-            streamBox.scrollTop = streamBox.scrollHeight; // scroll xuống tin mới
-
-            // Giới hạn số lượng hiển thị
-            if (streamBox.children.length > 10000) {
-                streamBox.removeChild(streamBox.firstChild);
+                renderMessage(parsed.user, parsed.message, null, false);
+            } catch (e) {
+                renderMessage("System", rawData, null, false);
             }
-        });
-
-        eventSource.onerror = () => {
-            console.warn("Stream ngắt kết nối, đang chờ tự động kết nối lại...");
         };
     }
 
-    setupStream();
+    // 6. Khởi chạy khi load trang
+    window.onload = async () => {
+        generateKey();
+        await loadHistory();
+        setupStream();
+    };
 </script>
 
 </body>

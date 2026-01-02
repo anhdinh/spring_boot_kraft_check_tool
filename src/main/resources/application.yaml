@@ -1,5 +1,6 @@
 server:
   port: 8080
+
 spring:
   application:
     name: kraf-tes
@@ -22,5 +23,7 @@ spring:
 
     template:
       default-topic: demo-kraft
+  mongodb:
+    uri: ${MONGO_CONNECTION_STRING:mongodb://admin:adminpassword123@20.3.32.78:30003/chat_db?authSource=admin}
 
 
