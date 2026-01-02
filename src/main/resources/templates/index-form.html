@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sảnh Chờ Kafka Chat</title>
+
+    <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}">
+
+    <style>
+        body {
+            background: #f4f7f6;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .welcome-container {
+            max-width: 500px;
+            margin: auto;
+        }
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+            padding: 0.8rem;
+            font-weight: 600;
+        }
+        .chat-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container welcome-container">
+    <div class="card p-5 text-center shadow border-0">
+        <div class="chat-icon" style="font-size: 3rem;">💬</div>
+
+        <h2 class="mb-3 fw-bold">NGSC Chat</h2>
+
+        <a th:href="@{/chat-room}" class="btn btn-primary w-100 shadow-sm mb-3 py-2 fw-bold">
+            Vào phòng Chat
+        </a>
+
+        <div sec:authorize="isAuthenticated()">
+            <form th:action="@{/logout}" method="post" id="logoutForm" class="d-none"></form>
+            <button onclick="document.getElementById('logoutForm').submit();"
+                    class="btn btn-outline-danger w-100 py-2 fw-bold">
+                🚪 Đăng xuất tài khoản
+            </button>
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+            <small class="text-muted" th:if="${!isLoggedIn}">
+                🛡️ Yêu cầu đăng nhập để xác thực danh tính
+            </small>
+
+            <div th:if="${isLoggedIn}">
+                <small class="text-success fw-bold">
+                    ✅ Đang đăng nhập: <span th:text="${username}">User</span>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
