@@ -1,0 +1,15 @@
+networks:
+  monitor-net:
+    external: true  # dùng network có sẵn, không bị recreate
+
+services:
+  myapp:
+    image: myapp:v1.0        # image Spring Boot của bạn
+    container_name: myapp
+    restart: unless-stopped
+    ports:
+      - "8081:8080"          # ánh xạ port nếu cần truy cập từ host
+    networks:
+      - monitor-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker  # nếu bạn dùng profile

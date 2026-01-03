@@ -23,22 +23,33 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
+                        // Bỏ qua static resources
                         .pathMatchers("/css/**", "/js/**").permitAll()
+
+                        // Bỏ qua các trang công khai
                         .pathMatchers("/", "/index.html", "/favicon.ico", "/api/latest", "/api/stream").permitAll()
+
+                        // Bỏ qua endpoint metric Actuator / Prometheus
+                        .pathMatchers("/actuator/**").permitAll()
+
+                        // Chỉ yêu cầu auth cho các API cần bảo vệ
                         .pathMatchers("/send", "/chat-room").authenticated()
+
+                        // Các request còn lại cần auth
                         .anyExchange().authenticated()
                 )
                 .formLogin(withDefaults())
                 .httpBasic(withDefaults())
                 // Cấu hình Logout
                 .logout(logoutSpec -> logoutSpec
-                        .logoutUrl("/logout") // URL nhận lệnh logout
+                        .logoutUrl("/logout")
                         .logoutSuccessHandler(new RedirectServerLogoutSuccessHandler() {{
-                            setLogoutSuccessUrl(java.net.URI.create("/?logout")); // Logout xong về trang chủ
+                            setLogoutSuccessUrl(java.net.URI.create("/?logout"));
                         }})
                 )
                 .build();
     }
+
     // Tạo User ảo trên Memory
     @Bean
     public MapReactiveUserDetailsService userDetailsService() {
