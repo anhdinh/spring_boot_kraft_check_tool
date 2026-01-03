@@ -31,6 +31,7 @@ public class KafkaWebController {
     @PostMapping("/send")
     public Mono<Map<String, String>> sendMessage(@RequestBody Mono<Map<String, String>> body) {
         return body.flatMap(data -> {
+            log.info("Received request with user: {} and message: {}", data.get("key"),data.get("message"));
             String key = data.get("key");
             String user = data.getOrDefault("user", key);
             String message = data.get("message");
@@ -77,6 +78,7 @@ public class KafkaWebController {
 
     @GetMapping("/api/latest")
     public Flux<Map> getLatestMessages() {
+        log.info("start get lastest message");
         // 1. Tạo Query
         Query query = new Query();
 
@@ -85,9 +87,10 @@ public class KafkaWebController {
 
         // 3. Giới hạn 10 bản ghi
         query.limit(10);
-
+        log.info("send to  client");
         // 4. Thực thi và trả về Flux (dòng dữ liệu bất đồng bộ)
         return reactiveMongoTemplate.find(query, Map.class, "messages");
+
     }
 
 }
